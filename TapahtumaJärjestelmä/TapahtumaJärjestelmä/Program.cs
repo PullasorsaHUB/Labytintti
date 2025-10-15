@@ -10,11 +10,11 @@ namespace TapahtumaJärjestelmä
         public string Phone { get; set; }
             public Participant(string Name)
             {
-                Name = Name?.Trim() ?? "";
+                this.Name = Name?.Trim();
                 //Email = Email?.Trim() ?? "";
                 //Phone = Phone?.Trim() ?? "";
             }
-        public override string ToString() => $"{Name} | {Email} | {Phone}";
+        public override string ToString() => $"{Name}";
     
     }
     public class Event
@@ -277,7 +277,7 @@ namespace TapahtumaJärjestelmä
         private static void NextSpeakerUI(Event Esystem)
         {
             if (Esystem.RemoveAfterSpeaking(out var finished, out var message))
-                Console.WriteLine($"Virhe: {message}");
+                Console.WriteLine($"{message}");
             else
                 Console.WriteLine($"Huom. {message}");
             Console.WriteLine();
