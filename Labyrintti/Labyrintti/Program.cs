@@ -1,107 +1,87 @@
-﻿namespace Labyrintti
+﻿using System.ComponentModel;
+using System.Globalization;
+using System.IO;
+
+namespace Labyrintti
 {
     internal class Program
     {
-        static int[,] mazeDFS =
+        static void Main(string[] args)
         {
-            {0,0,1,0,0},
-            {1,0,1,0,1},
-            {0,0,0,0,1},
-            {1,1,0,1,0},
-            {0,0,0,0,0}
-        };
+            var graph = new Dictionary<string, List<string>>
+            {
+                ["0,0"] = new List<string> {"0,1"},
+                ["0,1"] = new List<string> {"0,0", "1,1"},
+                ["0,3"] = new List<string> {"1,3", "0,4"},
+                ["0,4"] = new List<string> {"0,3"},
+                ["1,1"] = new List<string> {"0,1", "2,1"},
+                ["1,3"] = new List<string> {"0,3", "2,3"},
+                ["2,0"] = new List<string> {"2,1"},
+                ["2,1"] = new List<string> {"1,1", "2,0", "2,2"},
+                ["2,2"] = new List<string> {"2,1", "2,3", "3,2"},
+                ["2,3"] = new List<string> {"1,3", "2,2"},
+                ["3,2"] = new List<string> {"2,2", "4,2"},
+                ["4,0"] = new List<string> {"4,1"},
+                ["4,1"] = new List<string> {"4,0", "4,2"},
+                ["4,2"] = new List<string> {"3,2", "4,1", "4,3"},
+                ["4,3"] = new List<string> {"4,2", "4,4"},
+                ["4,4"] = new List<string> {"4,3"}
+            };
+            Console.WriteLine("DFS traversal: ");
+            var visited = new HashSet<string>();
+            DFS(graph, "0,0", visited);
 
+            Console.WriteLine("\n\nShortest path using BFS: ");
+            var path = BFS(graph, "0,0", "4,4");
+            Console.WriteLine(string.Join(" ->", path));
 
-        static bool[,] visited = new bool[5, 5];
-        static List<(int, int)> path = new List<(int, int)>();
-        public static bool DFS (int r, int c)
-        {
-            if (r < 0 || r >= 5 || c < 0 || c >= 5) return false; // Ulkona
-            if (mazeDFS[r, c] == 1 || visited[r, c]) return false;     // Seinä tai käytetty
-            visited[r, c] = true;
-            path.Add((r, c));   // Lisätään reittiin
-
-            if (r == 4 && c == 4) return true;  // maali löytyi
-
-            // Suunnat: ylös, oikea, alas, vasen
-            if (DFS(r - 1, c)) return true;
-            if (DFS(r, c + 1)) return true;
-            if (DFS(r + 1, c)) return true;
-            if (DFS(r, c - 1)) return true;
-
-            path.RemoveAt(path.Count - 1);  // Peru askeleita
-            return false;
         }
 
-
-        static int[,] mazeBFS =
-{
-            {0,0,1,0,0},
-            {1,0,1,0,1},
-            {0,0,0,0,1},
-            {1,1,0,1,0},
-            {0,0,0,0,0}
-        };
-
-
-        static (int, int)?[,] prev = new (int, int)?[5, 5];
-
-        static void BFS()
+        static void DFS(Dictionary<string, List<string>> graph, string start, HashSet<string> visited)
         {
-            Queue<(int, int)> queue = new();
-            bool[,] visited = new bool[5, 5];
+            if (visited.Contains(start)) return;    // stop if seen
+            visited.Add(start);         // mark visited
+            Console.WriteLine(start);   // print node
 
-            queue.Enqueue((0,0));
-            visited[0, 0] = true;
+            foreach (var next in graph[start])
+            {
+                DFS(graph, next, visited);      // recurse deeper
+            }
+        }
+        static List<string> BFS(Dictionary<string, List<string>> graph, string start, string goal)
+        {
+            var queue = new Queue<string>();
+            var visited = new HashSet<string>();
+            var parent = new Dictionary<string, string>();
+
+            queue.Enqueue(start);
+            visited.Add(start);
 
             while(queue.Count > 0)
             {
-                var (r, c) = queue.Dequeue();
-                if(r == 4 && c == 4)
+                var node = queue.Dequeue();
+                if(node == goal)
                 {
-                    return; // Maali
-                }
-
-                var dirs = new (int, int)[] {(-1,0),(0,1),(1,0),(0,-1)};    // Suunnat: ylös, oikealle, alas, vasen
-
-                foreach(var(dr, dc) in dirs)
-                {
-                    int nr = r + dr, nc = c + dc;
-                    if(nr >=0 && nr < 5 && nc >= 0 && nc <5 && mazeBFS[nr,nc]== 0 && !visited[nr, nc])
+                    var path = new List<string>();
+                    while(node != null)
                     {
-                        visited[nr, nc] = true;
-                        prev[nr, nc] = (r, c);  // kuka tuli tänne
-                        queue.Enqueue((nr, nc));
+                        path.Add(node);
+                        parent.TryGetValue(node, out node);
+                    }
+                    path.Reverse();
+                    return path;
+                }
+                foreach(var next in graph[node])
+                {
+                    if(!visited.Contains(next))
+                    {
+                        visited.Add(next);
+                        parent[next] = node;
+                        queue.Enqueue(next);
                     }
                 }
             }
-        }
-
-        static void Main(string[] args)
-        {
-            DFS(0, 0);
-            Console.WriteLine("DFS reitti:");
-            foreach( var p in path)
-            {
-                Console.WriteLine(p);
-            }
-            BFS();
-            List<(int, int)> route = new();
-            var current = (4, 4);
-
-            while(current != (0,0))
-            {
-                route.Add(current);
-                current = prev[current.Item1, current.Item2].Value;
-            }
-            route.Add((0, 0));
-            route.Reverse();
-
-            Console.WriteLine("\nBFS reitti:");
-            foreach(var p in route)
-            {
-                Console.WriteLine(p);
-            }
+            return new List<string>();
         }
     }
 }
